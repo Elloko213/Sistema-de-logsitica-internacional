@@ -269,10 +269,6 @@
     </div>
   </div>
 
-  <div class="nav-group-title">Acceso</div>
-  <div class="nav-item" data-page="login"><span class="dot"></span> Iniciar sesión</div>
-  <div class="nav-item" data-page="registro"><span class="dot"></span> Registro de cliente</div>
-
   <div class="nav-group-title">Cliente</div>
   <div class="nav-item" data-page="cliente"><span class="dot"></span> Mis envíos</div>
   <div class="nav-item" data-page="nuevoenvio"><span class="dot"></span> Registrar envío</div>
@@ -283,11 +279,6 @@
   <div class="nav-item" data-page="aduana"><span class="dot"></span> Agente de aduanas</div>
   <div class="nav-item" data-page="almacen"><span class="dot"></span> Encargado de almacén</div>
 
-  <div class="nav-group-title">Administración</div>
-  <div class="nav-item" data-page="admin"><span class="dot"></span> Usuarios (admin)</div>
-  <div class="nav-item" data-page="reportes"><span class="dot"></span> Reportes</div>
-
-  <div class="sidebar-foot">Grupo 16 · INF-266<br>Mockup navegable — Sprint 0</div>
 </div>
 
 <div class="main">
@@ -321,7 +312,7 @@
           <input type="password" placeholder="••••••••">
           <div class="hint" style="margin-bottom:16px;"><a href="#" style="color:var(--blue); text-decoration:none;">¿Olvidaste tu contraseña?</a></div>
           <button class="btn" style="width:100%; justify-content:center;" onclick="goTo('cliente')">Iniciar sesión</button>
-          <div class="divider">HU-02 · Inicio de sesión</div>
+          <div class="divider">Inicio de sesión</div>
           <div class="auth-foot">¿No tienes cuenta? <a href="#" onclick="goTo('registro')">Regístrate como cliente</a></div>
         </div>
       </div>
@@ -365,7 +356,7 @@
       </div>
 
       <div class="card">
-        <h3>Mis envíos <span class="tag">PB-04 · HU-04</span></h3>
+        <h3>Mis envíos <span class="tag"></span></h3>
         <table>
           <thead>
             <tr><th>Código</th><th>Origen → Destino</th><th>Mercancía</th><th>Estado</th><th>Últ. actualización</th><th></th></tr>
@@ -383,7 +374,7 @@
     <div class="page" id="page-nuevoenvio">
       <div class="grid grid-2">
         <div class="card">
-          <h3>Datos del envío <span class="tag">PB-03 · HU-03</span></h3>
+          <h3>Datos del envío <span class="tag"></span></h3>
           <div class="field-row">
             <div><label>País de origen</label><input id="reg-pais-origen" placeholder="Bolivia" value="Bolivia"></div>
             <div><label>País de destino</label><input id="reg-pais-destino" placeholder="Brasil"></div>
@@ -399,6 +390,13 @@
             <option value="Electrónicos">Electrónicos</option>
             <option value="Artesanías">Artesanías</option>
             <option value="Otro">Otro</option>
+          </select>
+          <label>Método de Transporte</label>
+          <select id="reg-transporte">
+            <option value="Aéreo (Avión)">Aéreo (Avión)</option>
+            <option value="Marítimo (Barco)">Marítimo (Barco)</option>
+            <option value="Terrestre">Terrestre</option>
+            <option value="Otro">Otro medio</option>
           </select>
           <div class="field-row">
             <div><label>Peso (kg)</label><input placeholder="240"></div>
@@ -457,7 +455,7 @@
         <div class="pill-tab">Todos</div>
       </div>
       <div class="card">
-        <h3>Envíos por asignar <span class="tag">PB-05 · HU-05</span></h3>
+        <h3>Envíos por asignar <span class="tag"></span></h3>
         <table>
           <tr><th>Código</th><th>Ruta</th><th>Mercancía</th><th>Registrado</th><th>Transportista</th><th></th></tr>
           <tr>
@@ -487,7 +485,7 @@
       </div>
 
       <div class="card" style="margin-top:18px;">
-        <h3>Actualizar ubicación <span class="tag">PB-06 · HU-06</span></h3>
+        <h3>Actualizar ubicación <span class="tag"></span></h3>
         <div class="grid grid-3">
           <div><label>Código de envío</label><input value="SGLI-0231"></div>
           <div><label>Ubicación actual</label><input placeholder="Ej. Desaguadero, frontera"></div>
@@ -502,7 +500,7 @@
     <div class="page" id="page-aduana">
       <div class="grid grid-2">
         <div class="card">
-          <h3>Registrar trámite aduanero <span class="tag">PB-07 · HU-07</span></h3>
+          <h3>Registrar trámite aduanero <span class="tag"></span></h3>
           <label>Código de envío</label>
           <input value="SGLI-0229">
           <label>Documentación presentada</label>
@@ -529,7 +527,7 @@
     <div class="page" id="page-almacen">
       <div class="grid grid-2">
         <div class="card">
-          <h3>Movimiento de mercancía <span class="tag">PB-08 · HU-08</span></h3>
+          <h3>Movimiento de mercancía <span class="tag"></span></h3>
           <div class="pill-tabs">
             <div class="pill-tab active">Ingreso</div>
             <div class="pill-tab">Salida</div>
@@ -555,49 +553,6 @@
         </div>
       </div>
     </div>
-
-    <div class="page" id="page-admin">
-      <div class="card">
-        <h3>Gestión de usuarios <span class="tag">PB-09 · HU-09 · Prioridad Media</span></h3>
-        <div style="text-align:right; margin-bottom:12px;">
-          <button class="btn accent small">+ Nuevo usuario</button>
-        </div>
-        <table>
-          <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr>
-          <tr><td>Milania Bautista</td><td>milania@sgli.com</td><td>Cliente</td><td><span class="status entregado">Activo</span></td><td><button class="btn small ghost">Editar</button></td></tr>
-          <tr><td>Joel Tito Bravo</td><td>joel@sgli.com</td><td>Operador logístico</td><td><span class="status entregado">Activo</span></td><td><button class="btn small ghost">Editar</button></td></tr>
-          <tr><td>Calef Hilari</td><td>calef@sgli.com</td><td>Agente de aduanas</td><td><span class="status entregado">Activo</span></td><td><button class="btn small ghost">Editar</button></td></tr>
-          <tr><td>Aracely Camino</td><td>aracely@sgli.com</td><td>Encargado de almacén</td><td><span class="status registrado">Inactivo</span></td><td><button class="btn small ghost">Editar</button></td></tr>
-        </table>
-      </div>
-    </div>
-
-    <div class="page" id="page-reportes">
-      <div class="card" style="margin-bottom:18px;">
-        <h3>Filtros de reporte <span class="tag">PB-10 · HU-10 · Prioridad Media</span></h3>
-        <div class="grid grid-4">
-          <div><label>Desde</label><input type="date"></div>
-          <div><label>Hasta</label><input type="date"></div>
-          <div><label>Estado</label><select><option>Todos</option><option>Entregado</option><option>En tránsito</option><option>En aduana</option></select></div>
-          <div style="display:flex; align-items:flex-end;"><button class="btn" style="width:100%; justify-content:center;">Generar reporte</button></div>
-        </div>
-      </div>
-      <div class="grid grid-4" style="margin-bottom:18px;">
-        <div class="card kpi"><div class="label">Envíos del mes</div><div class="value">48</div></div>
-        <div class="card kpi"><div class="label">Entregados a tiempo</div><div class="value">91%</div></div>
-        <div class="card kpi"><div class="label">Tiempo prom. en aduana</div><div class="value">1.8 d</div></div>
-        <div class="card kpi"><div class="label">Incidencias</div><div class="value">3</div></div>
-      </div>
-      <div class="card">
-        <h3>Exportar</h3>
-        <div style="display:flex; gap:10px;">
-          <button class="btn secondary small">Exportar PDF</button>
-          <button class="btn secondary small">Exportar Excel</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer-note">Mockup de baja–media fidelidad · Sistema de Gestión Logística Internacional (SGLI) · Grupo 16</div>
   </div>
 </div>
 
