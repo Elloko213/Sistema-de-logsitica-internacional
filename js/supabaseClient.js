@@ -7,7 +7,7 @@
 // ⚠️ Reemplaza estos valores por los de TU proyecto de Supabase
 // (Project Settings > API). El "anon key" es seguro de exponer en el
 // frontend: el acceso real se controla con las políticas RLS del backend.
-const SUPABASE_URL = 'https://gkhvqgrvjgzutpfzijxr.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdraHZxZ3J2amd6dXRwZnppanhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxOTI4NzksImV4cCI6MjEwMDc2ODg3OX0.TOk5JQZvCQFEx_2ioxJY3Rriw7m0sl83pLlaoQtpIRg';
+const SUPABASE_URL = 'https://euxjndjpfsudvltldobd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1eGpuZGpwZnN1ZHZsdGxkb2JkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTY1NjcsImV4cCI6MjEwMDgzMjU2N30.aG-JnnPenOEC2MqXjlUap4_FWGDezbTAxDBVAJSpdFM';
 
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
