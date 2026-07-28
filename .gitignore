@@ -1,0 +1,15 @@
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Node (por si en el futuro usan npm/live-server, etc.)
+node_modules/
+
+# Variables de entorno / claves sensibles (si en el futuro las separan del código)
+.env
+.env.local

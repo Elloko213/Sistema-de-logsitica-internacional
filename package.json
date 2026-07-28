@@ -1,0 +1,12 @@
+{
+  "name": "sgli-sistema-logistica-internacional",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión Logística Internacional (SGLI) — panel por rol con Supabase.",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes http-server . -p 5500 -c-1 -o",
+    "dev": "npx --yes http-server . -p 5500 -c-1 -o"
+  },
+  "keywords": ["logistica", "supabase", "javascript", "spa"],
+  "license": "MIT"
+}
