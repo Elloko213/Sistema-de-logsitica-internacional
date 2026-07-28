@@ -255,6 +255,8 @@
     text-align:center; font-size:11px; color:#9aa5b3; padding: 18px 0 4px 0;
   }
 </style>
+<!-- Librería de Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -652,33 +654,42 @@
   });
 
   // --- LÓGICA DE REGISTRO Y GPS ---
-
-  // "Base de datos" simulada
-  let enviosDB = [
-    { codigo: 'SGLI-0231', origen: 'La Paz', destino: 'Santos, BR', mercancia: 'Textiles', estado: 'En tránsito', clase: 'transito', lat: -17.9833, lng: -67.1500, ubi_texto: 'Ruta 1 (Oruro)' },
-    { codigo: 'SGLI-0229', origen: 'Cochabamba', destino: 'Buenos Aires, AR', mercancia: 'Quinua', estado: 'En aduana', clase: 'aduana', lat: -22.0965, lng: -65.5960, ubi_texto: 'Frontera Villazón' },
-    { codigo: 'SGLI-0226', origen: 'Miami, US', destino: 'La Paz', mercancia: 'Repuestos electrónicos', estado: 'En almacén', clase: 'almacen', lat: -16.5000, lng: -68.1500, ubi_texto: 'Almacén Central (La Paz)' }
-  ];
+// --- CONEXIÓN A SUPABASE (POSTGRESQL REAL) ---
+  const supaUrl = 'https://gkhvqgrvjgzutpfzijxr.supabase.co';
+  const supaKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdraHZxZ3J2amd6dXRwZnppanhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxOTI4NzksImV4cCI6MjEwMDc2ODg3OX0.TOk5JQZvCQFEx_2ioxJY3Rriw7m0sl83pLlaoQtpIRg';
+  const _supabase = supabase.createClient(supaUrl, supaKey);
 
   let map;
   let marker;
 
   function inicializarMapa() {
-    // Coordenadas centrales por defecto (La Paz)
     map = L.map('map').setView([-16.4897, -68.1193], 6);
-    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap'
     }).addTo(map);
-
     marker = L.marker([-16.4897, -68.1193]).addTo(map);
   }
 
-  function renderizarTabla() {
+  // Cargar datos reales de la base de datos
+  async function cargarEnvios() {
+    const { data, error } = await _supabase
+      .from('envios')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error("Error cargando la BD:", error);
+      return;
+    }
+    
+    renderizarTabla(data);
+  }
+
+  function renderizarTabla(enviosData) {
     const tbody = document.getElementById('tabla-body-envios');
     tbody.innerHTML = '';
     
-    enviosDB.forEach(envio => {
+    enviosData.forEach(envio => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><strong>${envio.codigo}</strong></td>
@@ -691,35 +702,48 @@
       tbody.appendChild(tr);
     });
     
-    document.getElementById('contador-activos').textContent = enviosDB.length;
+    document.getElementById('contador-activos').textContent = enviosData.length;
   }
 
-  function crearNuevoEnvio() {
+  async function crearNuevoEnvio() {
     const origen = document.getElementById('reg-ciudad-origen').value || 'La Paz';
     const destino = document.getElementById('reg-ciudad-destino').value || 'Desconocido';
     const mercancia = document.getElementById('reg-mercancia').value;
     
+    // Validar si añadieron el select de transporte
+    const refTransporte = document.getElementById('reg-transporte');
+    const transporte = refTransporte ? refTransporte.value : 'No especificado';
+    
     const nuevoCodigo = 'SGLI-0' + (Math.floor(Math.random() * 800) + 250);
     
-    const nuevo = {
-      codigo: nuevoCodigo,
-      origen: origen,
-      destino: destino,
-      mercancia: mercancia,
-      estado: 'Registrado',
-      clase: 'registrado',
-      lat: -16.4897, // Por defecto inicia en La Paz
-      lng: -68.1193,
-      ubi_texto: `Almacén origen (${origen})`
-    };
+    // Insertar el nuevo envío en PostgreSQL
+    const { error } = await _supabase
+      .from('envios')
+      .insert([
+        { 
+          codigo: nuevoCodigo, 
+          origen: origen, 
+          destino: destino, 
+          mercancia: mercancia,
+          transporte: transporte,
+          estado: 'Registrado',
+          clase: 'registrado',
+          lat: -16.4897,
+          lng: -68.1193,
+          ubi_texto: `Almacén origen (${origen})`
+        }
+      ]);
 
-    enviosDB.unshift(nuevo); // Añadir al inicio
-    renderizarTabla();
-    
-    // Feedback visual
+    if (error) {
+      alert("Error al conectar con la base de datos.");
+      console.error(error);
+      return;
+    }
+
     document.getElementById('preview-codigo').textContent = nuevoCodigo;
-    alert(`¡Envío ${nuevoCodigo} registrado con éxito!`);
+    alert(`¡Envío ${nuevoCodigo} guardado exitosamente en PostgreSQL!`);
     
+    cargarEnvios();
     irASeguimiento(nuevoCodigo);
   }
 
@@ -729,31 +753,34 @@
     buscarEnvio();
   }
 
-  function buscarEnvio() {
+  async function buscarEnvio() {
     const codigoAbuscar = document.getElementById('input-track').value.trim();
-    const envio = enviosDB.find(e => e.codigo === codigoAbuscar);
+    
+    // Buscar en la base de datos real
+    const { data, error } = await _supabase
+      .from('envios')
+      .select('*')
+      .eq('codigo', codigoAbuscar)
+      .single();
 
-    if(envio) {
-      // Actualizar Mapa
-      const latlng = [envio.lat, envio.lng];
+    if(data) {
+      const latlng = [data.lat, data.lng];
       map.setView(latlng, 8);
       marker.setLatLng(latlng)
-            .bindPopup(`<b>${envio.codigo}</b><br>${envio.estado}`)
+            .bindPopup(`<b>${data.codigo}</b><br>${data.estado}`)
             .openPopup();
       
-      // Actualizar UI del historial
-      document.getElementById('historial-ubicacion').textContent = envio.ubi_texto;
-      document.getElementById('historial-estado').textContent = envio.estado;
-      document.getElementById('historial-estado').className = `status ${envio.clase}`;
+      document.getElementById('historial-ubicacion').textContent = data.ubi_texto;
+      document.getElementById('historial-estado').textContent = data.estado;
+      document.getElementById('historial-estado').className = `status ${data.clase}`;
     } else {
-      alert("Código de envío no encontrado.");
+      alert("Código no encontrado en la base de datos. Verifica e intenta de nuevo.");
     }
   }
 
-  // Inicialización al cargar la página
   window.onload = () => {
     inicializarMapa();
-    renderizarTabla();
+    cargarEnvios(); // Carga de datos al abrir el sistema
     goTo('login');
   };
 
