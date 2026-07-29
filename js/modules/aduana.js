@@ -4,6 +4,8 @@
 import { supabase } from '../supabaseClient.js';
 import { sesion } from '../auth.js';
 import { notificar, ponerCargando, filaVacia, formatoFecha } from '../ui.js';
+import { cargarSelectorEnviosActivos } from './selectorEnvios.js';
+import { asegurarEventoSeguimiento } from './seguimiento.js';
 
 export function inicializarPanelAduana() {
   const form = document.getElementById('form-tramite-aduana');
@@ -12,6 +14,7 @@ export function inicializarPanelAduana() {
     form.addEventListener('submit', guardarTramite);
   }
   cargarTramitesRecientes();
+  cargarSelectorEnviosActivos('ad-codigo');
 }
 
 async function guardarTramite(ev) {
@@ -41,35 +44,32 @@ async function guardarTramite(ev) {
     agente_id: sesion.usuario.id,
   }]);
 
-  // Si el trámite se libera, el envío avanza de estado automáticamente
-  let e3 = null;
-  if (estadoTramite === 'Liberado') {
-    const r = await supabase.from('envios')
-      .update({ estado: 'En almacén', clase: 'almacen', ubi_texto: 'Liberado de aduana' })
-      .eq('id', envio.id);
-    e3 = r.error;
-  } else if (estadoTramite === 'Observado') {
-    const r = await supabase.from('envios')
-      .update({ estado: 'Observado', clase: 'transito' })
-      .eq('id', envio.id);
-    e3 = r.error;
-  } else {
-    const r = await supabase.from('envios')
-      .update({ estado: 'En aduana', clase: 'aduana' })
-      .eq('id', envio.id);
-    e3 = r.error;
-  }
+  const actualizacion = estadoTramite === 'Liberado'
+    ? { estado: 'En almacén', clase: 'almacen', ubi_texto: 'Liberado de aduana' }
+    : estadoTramite === 'Observado'
+      ? { estado: 'Observado', clase: 'transito', ubi_texto: 'Control aduanero — Observado' }
+      : { estado: 'En aduana', clase: 'aduana', ubi_texto: 'Control aduanero — En revisión' };
+  const { error: e3 } = await supabase.from('envios')
+    .update(actualizacion)
+    .eq('id', envio.id);
+  const errorHistorial = e3 ? null : await asegurarEventoSeguimiento({
+    envioId: envio.id,
+    estado: actualizacion.estado,
+    clase: actualizacion.clase,
+    ubicacion: actualizacion.ubi_texto,
+  });
 
   restaurar();
 
-  if (e2 || e3) {
-    console.error(e2 || e3);
+  if (e2 || e3 || errorHistorial) {
+    console.error(e2 || e3 || errorHistorial);
     notificar('No se pudo guardar el trámite.', 'error');
     return;
   }
   notificar(`Trámite de ${codigo} registrado.`, 'exito');
   document.getElementById('form-tramite-aduana').reset();
   cargarTramitesRecientes();
+  cargarSelectorEnviosActivos('ad-codigo');
 }
 
 async function cargarTramitesRecientes() {

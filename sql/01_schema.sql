@@ -159,6 +159,39 @@ create index if not exists idx_seguimiento_envio on public.seguimiento_historial
 create index if not exists idx_tramites_envio on public.tramites_aduana(envio_id);
 create index if not exists idx_movimientos_envio on public.movimientos_almacen(envio_id);
 
+-- Cada alta o cambio logístico queda registrado automáticamente.
+create or replace function public.registrar_evento_seguimiento()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  debe_registrar boolean := tg_op = 'INSERT';
+begin
+  if tg_op = 'UPDATE' then
+    debe_registrar :=
+      new.estado is distinct from old.estado
+      or new.ubi_texto is distinct from old.ubi_texto
+      or new.lat is distinct from old.lat
+      or new.lng is distinct from old.lng;
+  end if;
+
+  if debe_registrar then
+    insert into public.seguimiento_historial (
+      envio_id, estado, clase, ubicacion, lat, lng, registrado_por
+    ) values (
+      new.id, new.estado, new.clase, new.ubi_texto, new.lat, new.lng, auth.uid()
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_envios_seguimiento on public.envios;
+create trigger trg_envios_seguimiento
+  after insert or update on public.envios
+  for each row execute function public.registrar_evento_seguimiento();
+
 -- ----------------------------------------------------------------------------
 -- TRIGGER: mantener updated_at actualizado
 -- ----------------------------------------------------------------------------

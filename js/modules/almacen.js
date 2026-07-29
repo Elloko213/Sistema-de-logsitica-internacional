@@ -4,6 +4,8 @@
 import { supabase } from '../supabaseClient.js';
 import { sesion } from '../auth.js';
 import { notificar, ponerCargando, filaVacia, formatoFecha } from '../ui.js';
+import { cargarSelectorEnviosActivos } from './selectorEnvios.js';
+import { asegurarEventoSeguimiento } from './seguimiento.js';
 
 let tipoMovimientoActual = 'Ingreso';
 
@@ -26,6 +28,7 @@ export function inicializarPanelAlmacen() {
   }
 
   cargarInventario();
+  cargarSelectorEnviosActivos('al-codigo');
 }
 
 async function registrarMovimiento(ev) {
@@ -38,11 +41,17 @@ async function registrarMovimiento(ev) {
   const ubicacion = document.getElementById('al-ubicacion').value.trim();
   const responsable = document.getElementById('al-responsable').value.trim();
 
-  const { data: envio } = await supabase
+  const { data: envio, error: errorEnvio } = await supabase
     .from('envios').select('id').eq('codigo', codigo).maybeSingle();
 
+  if (errorEnvio || !envio) {
+    restaurar();
+    notificar('No se encontró un envío con ese código.', 'error');
+    return;
+  }
+
   const { error: e1 } = await supabase.from('movimientos_almacen').insert([{
-    envio_id: envio?.id || null,
+    envio_id: envio.id,
     codigo_envio: codigo,
     tipo_movimiento: tipoMovimientoActual,
     cantidad,
@@ -51,25 +60,28 @@ async function registrarMovimiento(ev) {
     encargado_id: sesion.usuario.id,
   }]);
 
-  let e2 = null;
-  if (envio) {
-    const nuevoEstado = tipoMovimientoActual === 'Ingreso'
-      ? { estado: 'En almacén', clase: 'almacen', ubi_texto: `Bodega — ${ubicacion || 'sin ubicación'}` }
-      : { estado: 'Despachado', clase: 'entregado', ubi_texto: 'Despachado desde almacén' };
-    const r = await supabase.from('envios').update(nuevoEstado).eq('id', envio.id);
-    e2 = r.error;
-  }
+  const nuevoEstado = tipoMovimientoActual === 'Ingreso'
+    ? { estado: 'En almacén', clase: 'almacen', ubi_texto: `Bodega — ${ubicacion || 'sin ubicación'}` }
+    : { estado: 'Despachado', clase: 'entregado', ubi_texto: 'Despachado desde almacén' };
+  const { error: e2 } = await supabase.from('envios').update(nuevoEstado).eq('id', envio.id);
+  const errorHistorial = e2 ? null : await asegurarEventoSeguimiento({
+    envioId: envio.id,
+    estado: nuevoEstado.estado,
+    clase: nuevoEstado.clase,
+    ubicacion: nuevoEstado.ubi_texto,
+  });
 
   restaurar();
 
-  if (e1 || e2) {
-    console.error(e1 || e2);
+  if (e1 || e2 || errorHistorial) {
+    console.error(e1 || e2 || errorHistorial);
     notificar('No se pudo registrar el movimiento.', 'error');
     return;
   }
   notificar(`Movimiento de ${codigo} (${tipoMovimientoActual}) guardado.`, 'exito');
   document.getElementById('form-movimiento-almacen').reset();
   cargarInventario();
+  cargarSelectorEnviosActivos('al-codigo');
 }
 
 async function cargarInventario() {
