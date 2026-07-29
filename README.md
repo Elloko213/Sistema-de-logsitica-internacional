@@ -133,7 +133,7 @@ Instrucciones detalladas en [`sql/03_seed_opcional.sql`](sql/03_seed_opcional.sq
 | Almacen | `almacen01@gmail.com` | `1234` |
 
 
-> ⚠️ Cuenta de demostración. Cambia esta contraseña antes de publicar o usar
+> ⚠️ Cuentas de demostración. Cambia estas contraseña antes de publicar o usar
 > el sistema en producción.
 
 ---
@@ -149,7 +149,11 @@ que solo un agente de aduanas pueda liberar un trámite.
 
 ## 👥 Autor(es)
 
-- Bautista Alanoca Milania - Camino Apaza Madeyba Aracely - Hilari Huchani Calef Wayar - Tito Bravo Joel Fidel (Sato) — Proyecto académico de Sistemas de Información Logística.
+- Bautista Alanoca Milania
+- Camino Apaza Madeyba Aracely
+- Hilari Huchani Calef Wayar
+- Tito Bravo Joel Fidel (Sato)
+— Proyecto académico de Sistemas de Información Logística.
 
 ---
 
