@@ -90,7 +90,7 @@ En tu proyecto de Supabase, abre **SQL Editor** y ejecuta en orden:
 3. `sql/03_seed_opcional.sql` (opcional)
 4. `sql/04_datos_demo_30.sql`(opcional)
 5. `sql/05_corregir_permisos_y_trazabilidad.sql`
-6. `sql/06_transportistas_iniciales.sql`
+6. `sql/06_transportistas_iniciales.sql`(opcional)
 7. `sql/07_reparar_historia_seguimiento.sql`
 
 ### 3. Levantar el sistema localmente
@@ -153,7 +153,8 @@ que solo un agente de aduanas pueda liberar un trámite.
 - Camino Apaza Madeyba Aracely
 - Hilari Huchani Calef Wayar
 - Tito Bravo Joel Fidel (Sato)
-— Proyecto académico de Sistemas de Información Logística.
+
+"Proyecto académico de Sistemas de Gestión Logística Internacional."
 
 ---
 
