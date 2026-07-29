@@ -36,16 +36,6 @@ solo pueda ver y modificar lo que le corresponde.
 
 ---
 
-## 🖥️ Capturas
-
-> _Agrega aquí 2-3 capturas de pantalla del sistema (login, panel de
-> cliente, panel de operador) para que se vea aún mejor. Súbelas a una
-> carpeta `docs/capturas/` y enlázalas así:_
->
-> `![Panel de cliente](docs/capturas/panel-cliente.png)`
-
----
-
 ## 🏗️ Arquitectura del proyecto
 
 ```
