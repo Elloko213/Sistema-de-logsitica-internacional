@@ -79,8 +79,8 @@ SGLI/
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/TU-USUARIO/TU-REPOSITORIO.git
-cd TU-REPOSITORIO
+https://github.com/Elloko213/Sistema-de-logsitica-internacional.git
+cd Sistema-de-logsitica-internacional
 ```
 
 ### 2. Configurar la base de datos
@@ -88,10 +88,19 @@ En tu proyecto de Supabase, abre **SQL Editor** y ejecuta en orden:
 1. `sql/01_schema.sql`
 2. `sql/02_rls_policies.sql`
 3. `sql/03_seed_opcional.sql` (opcional)
+4. `sql/04_datos_demo_30.sql`(opcional)
+5. `sql/05_corregir_permisos_y_trazabilidad.sql`
+6. `sql/06_transportistas_iniciales.sql`
+7. `sql/07_reparar_historia_seguimiento.sql`
 
 ### 3. Levantar el sistema localmente
 El proyecto usa módulos de JavaScript, así que no se puede abrir con
 doble clic — necesita un servidor local. Con Node.js instalado:
+
+```bash
+npm install
+```
+Luego 
 
 ```bash
 npm start
@@ -113,11 +122,16 @@ Supabase y luego se le asigna su rol en la tabla `perfiles`.
 
 Instrucciones detalladas en [`sql/03_seed_opcional.sql`](sql/03_seed_opcional.sql).
 
-### Credenciales de administrador
+### Credenciales de administrador y actores 
 
 | Rol | Correo | Contraseña |
 |---|---|---|
 | Administrador | `admin@gmail.com` | `123456` |
+| Cliente | `cliente01@gmail.com` | `1234` |
+| Operador | `Operador01@gmail.com` | `1234` |
+| Aduana | `aduana01@gmail.com` | `1234` |
+| Almacen | `almacen01@gmail.com` | `1234` |
+
 
 > ⚠️ Cuenta de demostración. Cambia esta contraseña antes de publicar o usar
 > el sistema en producción.
@@ -135,7 +149,7 @@ que solo un agente de aduanas pueda liberar un trámite.
 
 ## 👥 Autor(es)
 
-- Nombre del/los estudiante(s) — Proyecto académico de Sistemas de Información Logística.
+- Bautista Alanoca Milania - Camino Apaza Madeyba Aracely - Hilari Huchani Calef Wayar - Tito Bravo Joel Fidel (Sato) — Proyecto académico de Sistemas de Información Logística.
 
 ---
 
