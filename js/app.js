@@ -75,8 +75,7 @@ function inicializarPagina(pagina) {
       Cliente.inicializarFormularioEnvio();
       break;
     case 'seguimiento':
-      Cliente.inicializarMapa();
-      Cliente.refrescarMapa();
+      Cliente.inicializarSeguimiento();
       break;
     case 'operador':
       Operador.inicializarPanelOperador();

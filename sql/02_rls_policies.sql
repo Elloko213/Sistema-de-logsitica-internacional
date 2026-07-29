@@ -63,6 +63,10 @@ create policy "transportistas_insert_operador"
   on public.transportistas for insert
   with check (rol_actual() in ('operador','admin'));
 
+create policy "transportistas_update_operador"
+  on public.transportistas for update
+  using (rol_actual() in ('operador','admin'));
+
 -- ----------------------------------------------------------------------------
 -- ASIGNACIONES DE TRANSPORTE
 -- ----------------------------------------------------------------------------
@@ -98,6 +102,18 @@ create policy "seguimiento_select"
 create policy "seguimiento_insert_staff"
   on public.seguimiento_historial for insert
   with check (es_staff());
+
+create policy "seguimiento_insert_cliente_inicial"
+  on public.seguimiento_historial for insert
+  with check (
+    estado = 'Registrado'
+    and clase = 'registrado'
+    and registrado_por = auth.uid()
+    and exists (
+      select 1 from public.envios e
+      where e.id = envio_id and e.cliente_id = auth.uid()
+    )
+  );
 
 -- ----------------------------------------------------------------------------
 -- TRÁMITES ADUANEROS
@@ -138,3 +154,15 @@ create policy "movimientos_select"
 create policy "movimientos_insert_almacen"
   on public.movimientos_almacen for insert
   with check (rol_actual() in ('almacen','admin'));
+
+-- RLS decide qué filas puede usar cada rol; estos GRANT habilitan la API.
+grant usage on schema public to authenticated;
+grant select, update on public.perfiles to authenticated;
+grant select, insert, update on public.envios to authenticated;
+grant select, insert, update on public.transportistas to authenticated;
+grant select, insert on public.asignaciones_transporte to authenticated;
+grant select, insert on public.seguimiento_historial to authenticated;
+grant select, insert, update on public.tramites_aduana to authenticated;
+grant select, insert on public.movimientos_almacen to authenticated;
+grant execute on function public.rol_actual() to authenticated;
+grant execute on function public.es_staff() to authenticated;

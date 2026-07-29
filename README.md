@@ -124,6 +124,15 @@ Supabase y luego se le asigna su rol en la tabla `perfiles`.
 
 Instrucciones detalladas en [`sql/03_seed_opcional.sql`](sql/03_seed_opcional.sql).
 
+### Credenciales de administrador
+
+| Rol | Correo | Contraseña |
+|---|---|---|
+| Administrador | `admin@gmail.com` | `123456` |
+
+> ⚠️ Cuenta de demostración. Cambia esta contraseña antes de publicar o usar
+> el sistema en producción.
+
 ---
 
 ## 🔐 Seguridad

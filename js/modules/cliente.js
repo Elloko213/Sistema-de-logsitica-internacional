@@ -3,9 +3,15 @@
 // ============================================================================
 import { supabase } from '../supabaseClient.js';
 import { sesion } from '../auth.js';
-import { notificar, ponerCargando, formatoFecha, generarCodigo, filaVacia } from '../ui.js';
+import {
+  notificar, ponerCargando, formatoFecha, generarCodigo, filaVacia,
+  mensajeErrorSupabase, filtrarEnvios,
+} from '../ui.js';
+import { asegurarEventoSeguimiento } from './seguimiento.js';
 
 let mapa, marcador;
+let enviosCliente = [];
+let codigoBorrador;
 
 // ---------------------------------------------------------------- Mis envíos
 export async function cargarMisEnvios() {
@@ -23,26 +29,66 @@ export async function cargarMisEnvios() {
     return;
   }
 
+  enviosCliente = data || [];
   document.getElementById('contador-activos').textContent = data.filter(e => e.clase !== 'entregado').length;
   document.getElementById('kpi-transito').textContent = data.filter(e => e.clase === 'transito').length;
   document.getElementById('kpi-aduana').textContent = data.filter(e => e.clase === 'aduana').length;
   document.getElementById('kpi-entregados').textContent = data.filter(e => e.clase === 'entregado').length;
 
+  enlazarFiltrosEnvios();
+  renderizarEnvios();
+}
+
+function enlazarFiltrosEnvios() {
+  const buscar = document.getElementById('filtro-envios');
+  const estado = document.getElementById('filtro-estado');
+  if (!buscar?.dataset.bound) {
+    buscar.dataset.bound = '1';
+    buscar.addEventListener('input', renderizarEnvios);
+  }
+  if (!estado?.dataset.bound) {
+    estado.dataset.bound = '1';
+    estado.addEventListener('change', renderizarEnvios);
+  }
+}
+
+function renderizarEnvios() {
+  const tbody = document.getElementById('tabla-body-envios');
+  if (!tbody) return;
+
+  const termino = document.getElementById('filtro-envios')?.value.trim().toLowerCase() || '';
+  const estado = document.getElementById('filtro-estado')?.value || '';
+  const visibles = filtrarEnvios(enviosCliente, termino, estado);
+
+  const total = document.getElementById('total-envios');
+  if (total) total.textContent = termino || estado
+    ? `${visibles.length} de ${enviosCliente.length}`
+    : `${enviosCliente.length} ${enviosCliente.length === 1 ? 'registro' : 'registros'}`;
+
   tbody.innerHTML = '';
-  if (!data.length) {
-    filaVacia(tbody, 6, 'Todavía no registraste ningún envío. Usa el botón "Registrar nuevo envío".');
+  if (!visibles.length) {
+    filaVacia(
+      tbody,
+      6,
+      enviosCliente.length
+        ? 'No hay envíos que coincidan con los filtros.'
+        : 'Todavía no registraste envíos. Usa “Registrar nuevo envío” para comenzar.',
+    );
     return;
   }
 
-  data.forEach(envio => {
+  visibles.forEach(envio => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${envio.codigo}</strong></td>
-      <td>${envio.ciudad_origen || '—'} → ${envio.ciudad_destino || '—'}</td>
+      <td><strong class="tracking-code">${envio.codigo}</strong></td>
+      <td class="route-cell">
+        <strong>${envio.ciudad_origen || 'Sin origen'} → ${envio.ciudad_destino || 'Sin destino'}</strong>
+        <span>${envio.pais_origen || '—'} · ${envio.pais_destino || '—'}</span>
+      </td>
       <td>${envio.mercancia || '—'}</td>
       <td><span class="status ${envio.clase}">${envio.estado}</span></td>
       <td>${formatoFecha(envio.updated_at)}</td>
-      <td><button class="btn small secondary" data-codigo="${envio.codigo}">Ver GPS</button></td>
+      <td><button class="btn small secondary" data-codigo="${envio.codigo}">Seguir</button></td>
     `;
     tr.querySelector('button').addEventListener('click', () => window.SGLI.irASeguimiento(envio.codigo));
     tbody.appendChild(tr);
@@ -52,20 +98,75 @@ export async function cargarMisEnvios() {
 // ---------------------------------------------------------------- Nuevo envío
 export function inicializarFormularioEnvio() {
   const form = document.getElementById('form-nuevo-envio');
-  if (!form || form.dataset.bound) return;
+  if (!form) return;
+  codigoBorrador ||= generarCodigo();
+  actualizarResumenEnvio();
+  if (form.dataset.bound) return;
   form.dataset.bound = '1';
   form.addEventListener('submit', crearNuevoEnvio);
+  form.addEventListener('input', actualizarResumenEnvio);
+  form.addEventListener('change', actualizarResumenEnvio);
+}
+
+function actualizarResumenEnvio() {
+  const valor = id => document.getElementById(id)?.value.trim() || '';
+  const poner = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+  const origen = [valor('reg-ciudad-origen'), valor('reg-pais-origen')].filter(Boolean).join(', ');
+  const destino = [valor('reg-ciudad-destino'), valor('reg-pais-destino')].filter(Boolean).join(', ');
+  const fecha = valor('reg-fecha');
+  const requeridos = [
+    valor('reg-pais-origen'),
+    valor('reg-pais-destino'),
+    valor('reg-ciudad-origen'),
+    valor('reg-ciudad-destino'),
+    valor('reg-peso'),
+  ];
+  const porcentaje = Math.round((requeridos.filter(Boolean).length / requeridos.length) * 100);
+  const listo = porcentaje === 100;
+
+  poner('preview-codigo', codigoBorrador);
+  poner('preview-origen', origen || 'Por completar');
+  poner('preview-destino', destino || 'Por completar');
+  poner('preview-carga', valor('reg-mercancia') || 'Por completar');
+  poner('preview-transporte', valor('reg-transporte') || 'Por completar');
+  poner('preview-peso', valor('reg-peso') ? `${valor('reg-peso')} kg` : 'Por completar');
+  poner('preview-dimensiones', valor('reg-dimensiones') || 'Sin definir');
+  poner('preview-observaciones', valor('reg-observaciones') || 'Sin observaciones');
+  poner('preview-fecha', fecha
+    ? new Date(`${fecha}T00:00:00`).toLocaleDateString(
+      'es-BO',
+      { day: '2-digit', month: 'short', year: 'numeric' },
+    )
+    : 'Sin definir');
+
+  const progreso = document.getElementById('preview-progress');
+  if (progreso) progreso.style.width = `${porcentaje}%`;
+  poner('preview-progress-label', listo
+    ? 'Resumen listo para registrar'
+    : `${porcentaje}% de los datos requeridos`);
+  const estado = document.getElementById('preview-estado');
+  if (estado) {
+    estado.textContent = listo ? 'Listo' : 'Borrador';
+    estado.className = `status ${listo ? 'entregado' : 'registrado'}`;
+  }
 }
 
 async function crearNuevoEnvio(ev) {
   ev.preventDefault();
+  if (!sesion.usuario?.id) {
+    notificar('Tu sesión expiró. Inicia sesión nuevamente.', 'error');
+    return;
+  }
   const boton = document.getElementById('btn-crear-envio');
   const restaurar = ponerCargando(boton, 'Guardando...');
 
   const val = id => document.getElementById(id)?.value?.trim();
 
   const payload = {
-    codigo: generarCodigo(),
+    codigo: codigoBorrador || generarCodigo(),
     cliente_id: sesion.usuario.id,
     pais_origen: val('reg-pais-origen') || 'Bolivia',
     pais_destino: val('reg-pais-destino'),
@@ -89,17 +190,39 @@ async function crearNuevoEnvio(ev) {
 
   if (error) {
     console.error(error);
-    notificar('Ocurrió un error al registrar el envío. Verifica los datos.', 'error');
+    notificar(mensajeErrorSupabase(error, 'registrar el envío'), 'error');
     return;
   }
 
+  const errorHistorial = await asegurarEventoSeguimiento({
+    envioId: data.id,
+    estado: data.estado,
+    clase: data.clase,
+    ubicacion: data.ubi_texto,
+    lat: data.lat,
+    lng: data.lng,
+  });
+  if (errorHistorial) console.error('No se pudo iniciar el historial:', errorHistorial);
+
   document.getElementById('preview-codigo').textContent = data.codigo;
   notificar(`Envío ${data.codigo} guardado correctamente.`, 'exito', '¡Listo!');
+  codigoBorrador = generarCodigo();
   document.getElementById('form-nuevo-envio').reset();
+  actualizarResumenEnvio();
   window.SGLI.irASeguimiento(data.codigo);
 }
 
 // ---------------------------------------------------------------- Seguimiento GPS
+export function inicializarSeguimiento() {
+  inicializarMapa();
+  refrescarMapa();
+  const form = document.getElementById('form-buscar-envio');
+  if (!form?.dataset.bound) {
+    form.dataset.bound = '1';
+    form.addEventListener('submit', buscarEnvio);
+  }
+}
+
 export function inicializarMapa() {
   if (mapa) return;
   mapa = L.map('map').setView([-16.4897, -68.1193], 6);
@@ -113,9 +236,12 @@ export function refrescarMapa() {
   if (mapa) setTimeout(() => mapa.invalidateSize(), 200);
 }
 
-export async function buscarEnvio() {
-  const codigo = document.getElementById('input-track').value.trim();
+export async function buscarEnvio(ev) {
+  ev?.preventDefault();
+  const input = document.getElementById('input-track');
+  const codigo = input.value.trim().toUpperCase();
   if (!codigo) return;
+  input.value = codigo;
 
   const { data, error } = await supabase
     .from('envios')
@@ -134,6 +260,9 @@ export async function buscarEnvio() {
   marcador.setLatLng(latlng).bindPopup(`<b>${data.codigo}</b><br>${data.estado}`).openPopup();
 
   document.getElementById('historial-ubicacion').textContent = data.ubi_texto || '—';
+  document.getElementById('track-code-display').textContent = data.codigo;
+  document.getElementById('track-coordinates').textContent =
+    `${Number(data.lat).toFixed(5)}, ${Number(data.lng).toFixed(5)}`;
   const estadoEl = document.getElementById('historial-estado');
   estadoEl.textContent = data.estado;
   estadoEl.className = `status ${data.clase}`;

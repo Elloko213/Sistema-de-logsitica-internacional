@@ -5,12 +5,16 @@
 import { supabase } from '../supabaseClient.js';
 import { sesion } from '../auth.js';
 import { notificar, ponerCargando, claseDeEstado, filaVacia } from '../ui.js';
+import { cargarSelectorEnviosActivos } from './selectorEnvios.js';
+import { asegurarEventoSeguimiento } from './seguimiento.js';
 
 let filtroActual = 'pendientes';
 
-export function inicializarPanelOperador() {
+export async function inicializarPanelOperador() {
   const tabs = document.querySelectorAll('#page-operador .pill-tab');
   tabs.forEach((tab, i) => {
+    if (tab.dataset.bound) return;
+    tab.dataset.bound = '1';
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
@@ -25,14 +29,45 @@ export function inicializarPanelOperador() {
     formUbicacion.addEventListener('submit', guardarActualizacionUbicacion);
   }
 
-  cargarTransportistas();
-  cargarEnviosOperador();
+  const botonGps = document.getElementById('btn-usar-gps');
+  if (botonGps && !botonGps.dataset.bound) {
+    botonGps.dataset.bound = '1';
+    botonGps.addEventListener('click', usarUbicacionActual);
+  }
+
+  await cargarTransportistas();
+  await cargarEnviosOperador();
+  cargarSelectorEnviosActivos('op-codigo');
+}
+
+function usarUbicacionActual() {
+  if (!navigator.geolocation) {
+    notificar('Este navegador no permite obtener la ubicación GPS.', 'error');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      document.getElementById('op-lat').value = coords.latitude.toFixed(6);
+      document.getElementById('op-lng').value = coords.longitude.toFixed(6);
+      notificar('Coordenadas GPS obtenidas.', 'exito');
+    },
+    () => notificar('No se pudo obtener el GPS. Revisa el permiso de ubicación.', 'error'),
+    { enableHighAccuracy: true, timeout: 10000 },
+  );
 }
 
 async function cargarTransportistas() {
   const { data, error } = await supabase.from('transportistas').select('*').eq('activo', true);
-  if (error) { console.error(error); return; }
+  if (error) {
+    console.error(error);
+    window.SGLI._transportistas = [];
+    notificar('No se pudieron cargar los transportistas. Revisa los permisos de Supabase.', 'error');
+    return;
+  }
   window.SGLI._transportistas = data || [];
+  if (!data?.length) {
+    notificar('No hay transportistas activos. Carga el catálogo inicial en Supabase.', 'error');
+  }
 }
 
 export async function cargarEnviosOperador() {
@@ -56,6 +91,7 @@ export async function cargarEnviosOperador() {
   data.forEach(envio => {
     const tr = document.createElement('tr');
     const opciones = transportistas.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+    const hayTransportistas = transportistas.length > 0;
     tr.innerHTML = `
       <td><strong>${envio.codigo}</strong></td>
       <td>${envio.ciudad_origen || '—'} → ${envio.ciudad_destino || '—'}</td>
@@ -64,11 +100,11 @@ export async function cargarEnviosOperador() {
       <td>
         ${envio.transportista
           ? `<span class="status entregado">${envio.transportista}</span>`
-          : `<select data-envio="${envio.id}" style="margin:0; padding:6px 8px; font-size:12.5px;">
-              <option value="">Seleccionar transportista...</option>${opciones}
+          : `<select data-envio="${envio.id}" style="margin:0; padding:6px 8px; font-size:12.5px;" ${hayTransportistas ? '' : 'disabled'}>
+              <option value="">${hayTransportistas ? 'Seleccionar transportista...' : 'No hay transportistas activos'}</option>${opciones}
             </select>`}
       </td>
-      <td>${envio.transportista ? '' : `<button class="btn small" data-envio="${envio.id}" data-codigo="${envio.codigo}">Asignar</button>`}</td>
+      <td>${envio.transportista ? '' : `<button class="btn small" data-envio="${envio.id}" data-codigo="${envio.codigo}" ${hayTransportistas ? '' : 'disabled'}>Asignar</button>`}</td>
     `;
     const btn = tr.querySelector('button');
     if (btn) btn.addEventListener('click', () => asignarTransportista(tr, envio));
@@ -91,6 +127,15 @@ async function asignarTransportista(fila, envio) {
     .update({ transportista: nombreTransportista, estado: 'En tránsito', clase: 'transito' })
     .eq('id', envio.id);
 
+  const errorHistorial = e1 ? null : await asegurarEventoSeguimiento({
+    envioId: envio.id,
+    estado: 'En tránsito',
+    clase: 'transito',
+    ubicacion: envio.ubi_texto || 'Transportista asignado',
+    lat: envio.lat,
+    lng: envio.lng,
+  });
+
   const { error: e2 } = await supabase.from('asignaciones_transporte').insert([{
     envio_id: envio.id,
     transportista_id: transportistaId,
@@ -99,8 +144,8 @@ async function asignarTransportista(fila, envio) {
 
   restaurar();
 
-  if (e1 || e2) {
-    console.error(e1 || e2);
+  if (e1 || e2 || errorHistorial) {
+    console.error(e1 || e2 || errorHistorial);
     notificar('No se pudo completar la asignación.', 'error');
     return;
   }
@@ -117,6 +162,15 @@ async function guardarActualizacionUbicacion(ev) {
   const ubicacion = document.getElementById('op-ubicacion').value.trim();
   const estado = document.getElementById('op-estado').value;
   const clase = claseDeEstado(estado);
+  const lat = Number(document.getElementById('op-lat').value);
+  const lng = Number(document.getElementById('op-lng').value);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90 ||
+      !Number.isFinite(lng) || lng < -180 || lng > 180) {
+    restaurar();
+    notificar('Ingresa coordenadas GPS válidas.', 'error');
+    return;
+  }
 
   const { data: envio, error: e1 } = await supabase
     .from('envios').select('id').eq('codigo', codigo).maybeSingle();
@@ -128,23 +182,22 @@ async function guardarActualizacionUbicacion(ev) {
   }
 
   const { error: e2 } = await supabase.from('envios')
-    .update({ estado, clase, ubi_texto: ubicacion })
+    .update({ estado, clase, ubi_texto: ubicacion, lat, lng })
     .eq('id', envio.id);
 
-  const { error: e3 } = await supabase.from('seguimiento_historial').insert([{
-    envio_id: envio.id,
-    estado, clase, ubicacion,
-    registrado_por: sesion.usuario.id,
-  }]);
+  const errorHistorial = e2 ? null : await asegurarEventoSeguimiento({
+    envioId: envio.id, estado, clase, ubicacion, lat, lng,
+  });
 
   restaurar();
 
-  if (e2 || e3) {
-    console.error(e2 || e3);
+  if (e2 || errorHistorial) {
+    console.error(e2 || errorHistorial);
     notificar('No se pudo guardar la actualización.', 'error');
     return;
   }
   notificar(`Ubicación de ${codigo} actualizada.`, 'exito');
   document.getElementById('form-actualizar-ubicacion').reset();
   cargarEnviosOperador();
+  cargarSelectorEnviosActivos('op-codigo');
 }

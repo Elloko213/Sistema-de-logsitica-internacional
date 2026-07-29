@@ -54,8 +54,33 @@ export function claseDeEstado(estado) {
 
 /** Genera un código de seguimiento único con prefijo SGLI */
 export function generarCodigo() {
-  const n = Math.floor(1000 + Math.random() * 9000);
-  return `SGLI-${n}`;
+  return `SGLI-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+/** Convierte errores técnicos de Supabase en mensajes útiles para el usuario. */
+export function mensajeErrorSupabase(error, accion = 'completar la operación') {
+  const detalle = `${error?.code || ''} ${error?.message || ''}`.toLowerCase();
+  if (detalle.includes('42501') || detalle.includes('permission denied') || detalle.includes('row-level security')) {
+    return `No tienes permisos para ${accion}. Ejecuta la corrección SQL de permisos o revisa tu rol.`;
+  }
+  if (detalle.includes('23505') || detalle.includes('duplicate')) {
+    return 'El registro ya existe. Vuelve a intentarlo.';
+  }
+  if (detalle.includes('23503') || detalle.includes('foreign key')) {
+    return 'Tu usuario no tiene un perfil válido asociado.';
+  }
+  return `No se pudo ${accion}. ${error?.message || 'Verifica la conexión e intenta nuevamente.'}`;
+}
+
+/** Filtra el listado del cliente por texto libre y estado logístico. */
+export function filtrarEnvios(envios, termino = '', estado = '') {
+  const busqueda = termino.trim().toLowerCase();
+  return envios.filter(envio => {
+    const texto = [
+      envio.codigo, envio.ciudad_origen, envio.ciudad_destino, envio.mercancia,
+    ].join(' ').toLowerCase();
+    return (!busqueda || texto.includes(busqueda)) && (!estado || envio.clase === estado);
+  });
 }
 
 /** Renderiza una fila de "sin resultados" dentro de un <tbody> */
